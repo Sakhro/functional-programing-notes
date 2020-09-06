@@ -120,9 +120,9 @@ equals :: Setoid a => a ~> a -> Boolean
 
 ### Laws
 
-- Reflexivity `a.equals(a) === true`
-- Symmetry or commutativity `a.equals(b) === b.equals(a)`
-- Transitivity `If a.equals(b) and b.equals(c), then it’s always true that a.equals(c)`
+- **Reflexivity** `a.equals(a) === true`
+- **Symmetry** or **commutativity** `a.equals(b) === b.equals(a)`
+- **Transitivity** `If a.equals(b) and b.equals(c), then it’s always true that a.equals(c)`
 
 ---
 
