@@ -8,6 +8,8 @@
   - [Type Signatures](#type-signatures)
   - [Setoit](#setoit)
     - [Laws](#laws)
+  - [Ord](#ord)
+    - [Laws](#laws-1)
   - [Box](#box)
     - [Examples:](#examples)
   - [LazyBox](#lazybox)
@@ -21,15 +23,15 @@
   - [Task](#task)
     - [Examples:](#examples-5)
   - [Functors](#functors)
-    - [Laws](#laws-1)
+    - [Laws](#laws-2)
     - [Examples](#examples-6)
   - [Monads](#monads)
-    - [Laws](#laws-2)
-  - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-3)
+  - [Natural Transformations](#natural-transformations)
+    - [Laws](#laws-4)
     - [Examples](#examples-7)
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
-    - [Laws](#laws-4)
+    - [Laws](#laws-5)
     - [Examples](#examples-8)
   - [Real world app example (Spotify app)](#real-world-app-example-spotify-app)
   - [Resources](#resources)
@@ -110,7 +112,7 @@ add :: Int -> Int -> Int
 
 ## Setoit
 
-> A setoid is any type with a notion of equivalence. You already use plenty of setoids (integers, booleans, strings) almost every time you use the == operator, so this shouldn’t be too tricky.
+> A setoid is any type with a notion of equivalence. We use plenty of setoids (integers, booleans, strings) almost every time you use the == operator, so this shouldn’t be too tricky.
 
 Based on Fantasy Land-compliant it must have a prototype method called `equals`:
 
@@ -122,8 +124,50 @@ equals :: Setoid a => a ~> a -> Boolean
 
 - **Reflexivity** `a.equals(a) === true`
 - **Symmetry** or **commutativity** `a.equals(b) === b.equals(a)`
-- **Transitivity** `If a.equals(b) and b.equals(c), then it’s always true that a.equals(c)`
+- **Transitivity** `If a.equals(b)` and `b.equals(c)`, then it’s always `true` that `a.equals(c)`
 
+---
+
+## Ord
+
+> `Ord` types are types with a total ordering. That means that, given any two values of a given `Ord` type, you can determine whether one be greater than the other. To do this, we actually only need one method. Given that all `Ord` types must also be `Setoid` types, it could actually have been any of the comparison operators (`>`, `>=`, `<`, `<=`; think about why any of these would have worked), but the spec settled on `<=` (less-than-or-equal), which it refers to as `lte`:
+
+```JS
+lte :: Ord a => a ~> a -> Boolean
+```
+
+```JS
+// Greater than. The OPPOSITE of lte.
+// gt :: Ord a => a -> a -> Boolean
+const gt = function (x, y) {
+  return !lte(x, y)
+}
+
+// Greater than or equal.
+// gte :: Ord a => a -> a -> Boolean
+const gte = function (x, y) {
+  return gt(x, y) || x.equals(y)
+}
+
+// Less than. The OPPOSITE of gte!
+// lt :: Ord a => a -> a -> Boolean
+const lt = function (x, y) {
+  return !gte(x, y)
+}
+
+// And we already have lte!
+// lte :: Ord a => a -> a -> Boolean
+const lte = function (x, y) {
+  return x.lte(y)
+}
+```
+
+### Laws
+
+- **Totality** `a.lte(b) || b.lte(a) === true`
+- **Antisymmetry** `a.lte(b) && b.lte(a) === a.equals(b)`
+- **Transitivity** `a.lte(b) && b.lte(c) === a.lte(c)`
+  
 ---
 
 ## Box
