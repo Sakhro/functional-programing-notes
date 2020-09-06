@@ -2,6 +2,40 @@
 
 ---
 
+## Table of contents
+- [Functional programing notes with code examples](#functional-programing-notes-with-code-examples)
+  - [Table of contents](#table-of-contents)
+  - [Type Signatures](#type-signatures)
+  - [Setoit](#setoit)
+    - [Laws](#laws)
+  - [Box](#box)
+    - [Examples:](#examples)
+  - [LazyBox](#lazybox)
+    - [Examples:](#examples-1)
+  - [Either](#either)
+    - [Examples:](#examples-2)
+  - [Semigroup](#semigroup)
+    - [Examples:](#examples-3)
+  - [Monoid](#monoid)
+    - [Examples:](#examples-4)
+  - [Task](#task)
+    - [Examples:](#examples-5)
+  - [Functors](#functors)
+    - [Laws](#laws-1)
+    - [Examples](#examples-6)
+  - [Monads](#monads)
+    - [Laws](#laws-2)
+  - [Natural Transformations](#natural-transformations)
+    - [Laws](#laws-3)
+    - [Examples](#examples-7)
+  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+    - [Laws](#laws-4)
+    - [Examples](#examples-8)
+  - [Real world app example (Spotify app)](#real-world-app-example-spotify-app)
+  - [Resources](#resources)
+
+---
+
 ## Type Signatures
 
 The type signature notation used in this document is described below:<sup
@@ -71,6 +105,24 @@ add :: Int -> Int -> Int
 ```
 
 > In English, this says that our add function takes an integer x, and returns a function that takes an integer y, which returns an integer (probably x + y).
+
+---
+
+## Setoit
+
+> A setoid is any type with a notion of equivalence. You already use plenty of setoids (integers, booleans, strings) almost every time you use the == operator, so this shouldn’t be too tricky.
+
+Based on Fantasy Land-compliant it must have a prototype method called `equals`:
+
+```JS
+equals :: Setoid a => a ~> a -> Boolean
+```
+
+### Laws
+
+- Reflexivity `a.equals(a) === true`
+- Symmetry or commutativity `a.equals(b) === b.equals(a)`
+- Transitivity `If a.equals(b) and b.equals(c), then it’s always true that a.equals(c)`
 
 ---
 
@@ -452,6 +504,7 @@ const both = Fn(compose(All, hasVowels)).concat(Fn(compose(All, longWord)))
 ---
 
 ## Monoid
+
 > If we have a special element like the zero here under addition, we have what's called a monoid, that is a semigroup with a special element in there that acts like a neutral identity.
 
 ```JS
@@ -884,7 +937,7 @@ filterEither(Right("hello"), x => x.match(/h/ig))
   .map(x => x.toUpperCase()) // If first argument not match the predicate this line don't run
 ```
 
-## Real world app example
+## Real world app example (Spotify app)
 
 > We form a plan to find the common ground between two artists from the spotify api. Then we sketch out a data flow to ensure we have what we need, when we need it.
 
@@ -953,7 +1006,7 @@ names
 ```
 
 ---
-### Resources
+## Resources
 - https://egghead.io/courses/professor-frisby-introduces-composable-functional-javascript
 - http://www.tomharding.me/fantasy-land/
 - https://github.com/fantasyland/fantasy-land#type-representatives
