@@ -789,11 +789,20 @@ Map({ home: ["/", "/home"], about: ["/about-us"] })
 
 ## Functors
 
-### Laws
+> Functor types are containers. Not all container types are functors.
 
 ```JS
-fx.map(f).map(g) === fx.map(x => f(g(x)))
+// Any functor must have a `map` method:
+map :: Functor f => f a ~> (a -> b) -> f b
+```
 
+### Laws
+
+- Composition `fx.map(f).map(g) === fx.map(x => f(g(x))) 
+              || u.map(f).map(g) === u.map(x => g(f(x)))
+              || U(x).map(id) === U(id(x)) === U(x)`
+  
+```JS
 const exp1 = Box("Squirrels")
   .map(s => s.substr(5))
   .map(s => s.toUpperCase())
@@ -803,10 +812,11 @@ const exp2 = Box("Squirrels")
 
 exp1 === exp2
 ```
+- Identity `fx.map(id) === id(fx) 
+            || u.map(x => x) === u
+            || U(x).map(g).map(f) === U(g(x)).map(f) === U(f(g(x))) === U(x).map(x => f(g(x)))`
 
 ```JS
-fx.map(id) === id(fx)
-
 const id = x => x
 
 const exp1 = Box("crayons").map(id)
