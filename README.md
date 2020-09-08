@@ -17,21 +17,23 @@
   - [Either](#either)
     - [Examples:](#examples-2)
   - [Semigroup](#semigroup)
+    - [Laws](#laws-2)
     - [Examples:](#examples-3)
   - [Monoid](#monoid)
+    - [Laws](#laws-3)
     - [Examples:](#examples-4)
   - [Task](#task)
     - [Examples:](#examples-5)
   - [Functors](#functors)
-    - [Laws](#laws-2)
+    - [Laws](#laws-4)
     - [Examples](#examples-6)
   - [Monads](#monads)
-    - [Laws](#laws-3)
+    - [Laws](#laws-5)
   - [Natural Transformations](#natural-transformations)
-    - [Laws](#laws-4)
+    - [Laws](#laws-6)
     - [Examples](#examples-7)
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
-    - [Laws](#laws-5)
+    - [Laws](#laws-7)
     - [Examples](#examples-8)
   - [Real world app example (Spotify app)](#real-world-app-example-spotify-app)
   - [Resources](#resources)
@@ -458,6 +460,10 @@ export const parseUrl = (config: string): string | void => {
 > Semi-groups are simply a type with a concat method that are associative
 
 ```JS
+concat :: Semigroup a => a ~> a -> a
+```
+
+```JS
 const Sum = x => ({
   x,
   concat: ({ x: y }) => Sum(x + y)
@@ -504,6 +510,10 @@ const Paid = (x, y) => ({
   concat: ({ x: x1, y: y1 }) => Pair(x.concat(x1), y.concat(y1))
 })
 ```
+
+### Laws
+
+- Associativity `a.concat(b).concat(c) === a.concat(b.concat(c))`
 
 ### Examples:
 
@@ -552,6 +562,10 @@ const both = Fn(compose(All, hasVowels)).concat(Fn(compose(All, longWord)))
 > If we have a special element like the zero here under addition, we have what's called a monoid, that is a semigroup with a special element in there that acts like a neutral identity.
 
 ```JS
+empty :: Monoid m => () -> m
+```
+
+```JS
 ...
 Sum.empty = () => Sum(0)
 
@@ -570,9 +584,15 @@ Min.empty = () => Min(Infinity)
 ...
 Product.empty = () => Product(1)
 
+// Cheat
 ...
 First.empty = () => First(Left())
 ```
+
+### Laws
+
+- Right identity `MyType(x).concat(MyType.empty()) === MyType(x)`
+- Left identity `MyType.empty().concat(MyType(x)) === MyType(x)`
 
 ### Examples:
 
@@ -586,6 +606,21 @@ All(true).concat(All(true)).concat(All.empty()) // All(true)
 const sum = xs => xs.reduce((acc, x) => acc + x, 0)
 
 const all = xs => xs.reduce((acc, x) => acc && x, true)
+```
+
+```JS
+// A friendly neighbourhood monoid fold.
+// fold :: Monoid m => (a -> m) -> [a] -> m
+const fold = M => xs => xs.reduce(
+  (acc, x) => acc.concat(M(x)),
+  M.empty())
+
+// We can now use our monoids for (almost) all
+// our array reduction needs!
+fold(Sum)([1, 2, 3, 4, 5]).val // 15
+fold(Product)([1, 2, 3]).val   // 6
+fold(Max)([9, 7, 11]).val      // 11
+fold(Sum)([]).val              // 0 - ooer!
 ```
 
 ```JS
