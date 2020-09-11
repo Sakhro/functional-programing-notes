@@ -30,14 +30,17 @@
   - [Contravariant](#contravariant)
     - [Laws](#laws-5)
     - [Examples](#examples-7)
-  - [Monads](#monads)
+  - [Apply](#apply)
     - [Laws](#laws-6)
-  - [Natural Transformations](#natural-transformations)
-    - [Laws](#laws-7)
     - [Examples](#examples-8)
-  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+  - [Monads](#monads)
+    - [Laws](#laws-7)
+  - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-8)
     - [Examples](#examples-9)
+  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+    - [Laws](#laws-9)
+    - [Examples](#examples-10)
   - [Real world app example (Spotify app)](#real-world-app-example-spotify-app)
   - [Resources](#resources)
 
@@ -924,7 +927,7 @@ contramap :: f a ~> (b -> a) -> f b
 const f = x => x.length
 
 // ['Hello', 'world']
-;['Hello', 'world'].map(f).contramap(f)
+['Hello', 'world'].map(f).contramap(f)
 ```
 
 ```JS
@@ -985,6 +988,115 @@ const searchCheck =
 searchCheck.f('Hello', 'HEllO!') // true
 searchCheck.f('world', 'werld')  // false
 ```
+
+---
+
+## Apply
+
+> Is just a mechanism for combining contexts (worlds!) together without unwrapping them.
+
+```JS
+ap :: Apply f => f a ~> f (a -> b) -> f b
+--                 a ->   (a -> b) ->   b
+```
+
+> If we ignore the `f`s, we get the second line, which is our basic **function application**: we apply a value of type `a` to a function of type `a -> b`, and we get a value of type `b`. Woo! What’s the difference with `ap`? All those bits are wrapped in the **context** of our `f` functor!
+
+```JS
+// compose :: (b -> c) -> (a -> b) -> a -> c
+const compose = f => g => x => f(g(x))
+```
+
+### Laws 
+- composition `x.ap(g.ap(f.map(compose))) === x.ap(g).ap(f)` or `x.map(compose(f)(g)) === x.map(g).map(f)`
+
+### Examples
+
+```JS
+// Remember: `f` MUST be curried!
+// lift2 :: Applicative f
+//       =>  (a ->   b ->   c)
+//       -> f a -> f b -> f c
+const lift2 = f => a => b =>
+  b.ap(a.map(f))
+
+// But, if we write lift3...
+const lift3 =
+  f => a => b => c =>
+    c.ap(b.ap(a.map(f)))
+```
+
+If we use functor
+```JS
+// lift2F :: Functor f
+//        => (  a ->   b ->      c)
+//        ->  f a -> f b -> f (f c)
+const lift2F = f => as => bs =>
+  as.map(a => bs.map(b => f(a)(b)))
+```
+
+```JS
+const Identity = daggy.tagged('Identity', ['x'])
+
+// map :: Identity a ~> (a -> b)
+//                   -> Identity b
+Identity.prototype.map = function (f) {
+  return new Identity(f(this.x))
+}
+
+// ap :: Identity a ~> Identity (a -> b)
+//                  -> Identity b
+Identity.prototype.ap = function (b) {
+  return new Identity(b.x(this.x))
+}
+
+// Identity(5)
+lift2(x => y => x + y)
+     (Identity(2))
+     (Identity(3))
+```
+
+```JS
+// Our implementation of ap.
+// ap :: Array a ~> Array (a -> b) -> Array b
+Array.prototype.ap = function (fs) {
+  return [].concat(... fs.map(
+    f => this.map(f)
+  ))
+}
+
+// 3 x 0 elements
+// []
+[2, 3, 4].ap([])
+
+// 3 x 1 elements
+// [ '2!', '3!', '4!' ]
+[2, 3, 4]
+.ap([x => x + '!'])
+
+// 3 x 2 elements
+// [ '2!', '3!', '4!'
+// , '2?', '3?', '4?' ]
+[2, 3, 4]
+.ap([ x => x + '!'
+    , x => x + '?' ])
+```
+
+```JS
+return lift2(x => y => x + y)(array1)(array2)
+
+// ... is the same as...
+
+const result = []
+
+for (x in array1)
+  for (y in array2)
+    result.push(x + y)
+
+return result
+```
+
+---
 
 ## Monads
 
