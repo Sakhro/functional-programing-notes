@@ -41,7 +41,8 @@
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
     - [Laws](#laws-9)
     - [Examples](#examples-10)
-  - [Real world app example (Spotify app)](#real-world-app-example-spotify-app)
+  - [Real world app example](#real-world-app-example)
+    - [Spotify app](#spotify-app)
   - [Resources](#resources)
 
 ---
@@ -1223,7 +1224,9 @@ filterEither(Right("hello"), x => x.match(/h/ig))
   .map(x => x.toUpperCase()) // If first argument not match the predicate this line don't run
 ```
 
-## Real world app example (Spotify app)
+## Real world app example
+
+### Spotify app
 
 > We form a plan to find the common ground between two artists from the spotify api. Then we sketch out a data flow to ensure we have what we need, when we need it.
 
