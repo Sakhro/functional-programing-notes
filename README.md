@@ -27,14 +27,17 @@
   - [Functors](#functors)
     - [Laws](#laws-4)
     - [Examples](#examples-6)
-  - [Monads](#monads)
+  - [Contravariant](#contravariant)
     - [Laws](#laws-5)
-  - [Natural Transformations](#natural-transformations)
-    - [Laws](#laws-6)
     - [Examples](#examples-7)
-  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+  - [Monads](#monads)
+    - [Laws](#laws-6)
+  - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-7)
     - [Examples](#examples-8)
+  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+    - [Laws](#laws-8)
+    - [Examples](#examples-9)
   - [Real world app example (Spotify app)](#real-world-app-example-spotify-app)
   - [Resources](#resources)
 
@@ -900,6 +903,88 @@ Task.of(p1 => p2 => reportHeader(p1, p2))
 ```
 
 ---
+
+## Contravariant
+
+Same as Functor, however backwards. Like `pipe` and `compose`
+
+```JS
+contramap :: f a ~> (b -> a) -> f b
+```
+
+### Laws
+
+- Identity `U.contramap(x => x) === U`
+- Composition `U.contramap(f).contramap(g) === U.contramap(x => f(g(x)))`
+
+### Examples
+
+```JS
+// f :: String -> Int
+const f = x => x.length
+
+// ['Hello', 'world']
+;['Hello', 'world'].map(f).contramap(f)
+```
+
+```JS
+// type Predicate a = a -> Bool
+// The `a` is the *INPUT* to the function!
+const Predicate = daggy.tagged('Predicate', ['f'])
+
+// Make a Predicate that runs `f` to get
+// from `b` to `a`, then uses the original
+// Predicate function!
+// contramap :: Predicate a ~> (b -> a)
+//                          -> Predicate b
+Predicate.prototype.contramap =
+  function (f) {
+    return Predicate(
+      x => this.f(f(x))
+    )
+  }
+
+// isEven :: Predicate Int
+const isEven = Predicate(x => x % 2 === 0)
+
+// Take a string, run .length, then isEven.
+// lengthIsEven :: Predicate String
+const lengthIsEven =
+  isEven.contramap(x => x.length)
+```
+
+> `lengthIsEven` converts a `String` to an `Int`, then to a `Bool`. We don’t care that there’s an `Int` somewhere in the pipeline - we just care about what the input value has to be.
+
+```JS
+// type Equivalence a = a -> a -> Bool
+// `a` is the type of *BOTH INPUTS*!
+const Equivalence = daggy.tagged('Equivalence', ['f'])
+
+// Add a pre-processor for the variables.
+Equivalence.prototype.contramap =
+  function (g) {
+    return Equivalence(
+      (x, y) => this.f(g(x), g(y))
+    )
+  }
+
+// Do a case-insensitive equivalence check.
+// searchCheck :: Equivalence String
+const searchCheck =
+
+  // Basic equivalence
+  Equivalence((x, y) => x === y)
+
+  // Remove symbols
+  .contramap(x => x.replace(/\W+/, ''))
+
+  // Lowercase alpha
+  .contramap(x => x.toLowerCase())
+
+// And some tests...
+searchCheck.f('Hello', 'HEllO!') // true
+searchCheck.f('world', 'werld')  // false
+```
 
 ## Monads
 
