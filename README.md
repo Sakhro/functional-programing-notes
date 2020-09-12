@@ -16,32 +16,34 @@
     - [Examples:](#examples-1)
   - [Either](#either)
     - [Examples:](#examples-2)
-  - [Semigroup](#semigroup)
+  - [Function](#function)
     - [Laws](#laws-2)
+  - [Semigroup](#semigroup)
+    - [Laws](#laws-3)
     - [Examples:](#examples-3)
   - [Monoid](#monoid)
-    - [Laws](#laws-3)
+    - [Laws](#laws-4)
     - [Examples:](#examples-4)
   - [Task](#task)
     - [Examples:](#examples-5)
   - [Functors](#functors)
-    - [Laws](#laws-4)
+    - [Laws](#laws-5)
     - [Examples](#examples-6)
   - [Contravariant](#contravariant)
-    - [Laws](#laws-5)
+    - [Laws](#laws-6)
     - [Examples](#examples-7)
   - [Apply](#apply)
-    - [Laws](#laws-6)
+    - [Laws](#laws-7)
     - [Examples](#examples-8)
   - [Monads](#monads)
-    - [Laws](#laws-7)
-  - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-8)
+  - [Natural Transformations](#natural-transformations)
+    - [Laws](#laws-9)
     - [Examples](#examples-9)
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
-    - [Laws](#laws-9)
+    - [Laws](#laws-10)
     - [Examples](#examples-10)
-  - [Real world app example](#real-world-app-example)
+  - [Real world app examples](#real-world-app-examples)
     - [Spotify app](#spotify-app)
   - [Resources](#resources)
 
@@ -269,14 +271,22 @@ const Either = Right || Left
 
 const Right = x => ({
   chain: f => f(x),
+  // Transform the inner value
+  // map :: Either a b ~> (b -> c) -> Either a c
   map: f => Right(f(x)),
+  // Get the value with the right-hand function
+  // fold :: Either a b ~> (a -> c, b -> c) -> c
   fold: (f, g) => g(x),
   inspect: () => `Right(${x})`
 })
 
 const Left = x => ({
   chain: f => f(x),
+  // Do nothing
+  // map :: Either a b ~> (b -> c) -> Either a c
   map: f => Left(x),
+  // Get the value with the left-hand function
+  // fold :: Either a b ~> (a -> c, b -> c) -> c
   fold: (f, g) => f(x),
   inspect: () => `Left(${x})`
 })
@@ -458,6 +468,57 @@ export const parseUrl = (config: string): string | void => {
     .chain((c) => fromNullable(c.url))
     .fold(onError, onSuccess)
 }
+```
+
+---
+
+## Function
+
+Functions are functors
+
+```JS
+map :: Functor f => (a -> b) -> f a -> f b
+
+// (a -> b) ~> (b -> c) -> a -> c
+Function.prototype.map = function (that) {
+  return x => that(this(x))
+}
+```
+
+### Laws
+
+- Identity
+```JS
+f.map(id)
+  // By definition function's `map`
+  === x => id(f(x))
+  // By definition of `id`
+  === x => f(x)
+  // We're there!
+  === f
+```
+
+- Composition
+```JS
+compose(map(h), map(g))(f)
+  // By composition's definition
+  === map(h)(map(g)(f))
+  // By map's definition
+  === (map(g)(f)).map(h)
+  // ... and again...
+  === f.map(g).map(h)
+  // By function's map definition
+  === (x => g(f(x))).map(h)
+  // ... and again... eep...
+  === y => h((x => g(f(x)))(y))
+  // Applying y to (x => g(f(x)))...
+  === y => h(g(f(y)))
+  // By composition's definition...
+  === y => compose(h, g)(f(y))
+  // By function's map definition...
+  === (y => f(y)).map(compose(h, g))
+  // YAY!
+  === f.map(compose(h, g))
 ```
 
 ---
@@ -848,6 +909,28 @@ const liftA2 = (f, fx, fy) =>
 liftA2(add, Box(2), Box(4)) // Box(6)
 ```
 
+```JS
+const Just = x => ({
+  // Transform the inner value
+  // map :: Maybe a ~> (a -> b) -> Maybe b
+  map: f => Just(f(x)),
+
+  // Get the inner value
+  // fold :: Maybe a ~> (b, a -> b) -> b
+  fold: (_, f) => f(x)
+})
+
+const Nothing = ({
+  // Do nothing
+  // map :: Maybe a ~> (a -> b) -> Maybe b
+  map: f => Nothing,
+
+  // Return the default value
+  // fold :: Maybe a ~> (b, a -> b) -> b
+  fold: (d, _) => d
+})
+```
+
 ### Examples
 
 ```JS
@@ -1224,7 +1307,7 @@ filterEither(Right("hello"), x => x.match(/h/ig))
   .map(x => x.toUpperCase()) // If first argument not match the predicate this line don't run
 ```
 
-## Real world app example
+## Real world app examples
 
 ### Spotify app
 
