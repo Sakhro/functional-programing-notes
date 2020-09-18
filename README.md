@@ -26,23 +26,26 @@
     - [Examples:](#examples-4)
   - [Task](#task)
     - [Examples:](#examples-5)
-  - [Functors](#functors)
+  - [Applicative](#applicative)
     - [Laws](#laws-5)
     - [Examples](#examples-6)
-  - [Contravariant](#contravariant)
+  - [Functors](#functors)
     - [Laws](#laws-6)
     - [Examples](#examples-7)
-  - [Apply](#apply)
+  - [Contravariant](#contravariant)
     - [Laws](#laws-7)
     - [Examples](#examples-8)
-  - [Monads](#monads)
+  - [Apply](#apply)
     - [Laws](#laws-8)
-  - [Natural Transformations](#natural-transformations)
-    - [Laws](#laws-9)
     - [Examples](#examples-9)
-  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+  - [Monads](#monads)
+    - [Laws](#laws-9)
+  - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-10)
     - [Examples](#examples-10)
+  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+    - [Laws](#laws-11)
+    - [Examples](#examples-11)
   - [Real world app examples](#real-world-app-examples)
     - [Spotify app](#spotify-app)
   - [Resources](#resources)
@@ -851,6 +854,50 @@ Map({ home: ["/", "/home"], about: ["/about-us"] })
     List(routes)
       .traverse(Task.of, route => httpGet(route, {})))
   .fork(e => "error", x => x) // Map({ home: List("/ result", "/home result"), ...})
+```
+
+---
+
+## Applicative
+
+```JS
+of :: Applicative f => a -> f a
+```
+
+### Laws
+- Identity `v.ap(A.of(x => x)) === v`
+- Homomorphism `A.of(x).ap(A.of(f)) === A.of(f(x))`
+- Interchange `A.of(y).ap(u) === u.ap(A.of(f => f(y)))`
+
+### Examples
+
+```JS
+// append :: a -> [a] -> [a]
+const append = y => xs => xs.concat([y])
+
+// There's that sneaky lift2 again!
+// lift2 :: Applicative f
+//       => (a -> b -> c, f a, f b)
+//       -> f c
+const lift2 = (f, a, b) => b.ap(a.map(f))
+
+// insideOut :: Applicative f
+//           => [f a] -> f [a]
+const insideOut = (T, xs) => xs.reduce(
+  (acc, x) => lift2(append, x, acc),
+  T.of([])) // To start us off!
+
+// For example...
+
+// Just [2, 10, 3]
+insideOut(Maybe, [ Just(2)
+                 , Just(10)
+                 , Just(3) ])
+
+// Nothing
+insideOut(Maybe, [ Just(2)
+                 , Nothing
+                 , Just(3) ])
 ```
 
 ---
