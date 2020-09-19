@@ -29,22 +29,28 @@
   - [Applicative](#applicative)
     - [Laws](#laws-5)
     - [Examples](#examples-6)
+    - [Alt](#alt)
+  - [Laws](#laws-6)
+    - [Plus](#plus)
+  - [Laws](#laws-7)
+    - [Alternative](#alternative)
+  - [Laws](#laws-8)
   - [Functors](#functors)
-    - [Laws](#laws-6)
+    - [Laws](#laws-9)
     - [Examples](#examples-7)
   - [Contravariant](#contravariant)
-    - [Laws](#laws-7)
+    - [Laws](#laws-10)
     - [Examples](#examples-8)
   - [Apply](#apply)
-    - [Laws](#laws-8)
+    - [Laws](#laws-11)
     - [Examples](#examples-9)
   - [Monads](#monads)
-    - [Laws](#laws-9)
+    - [Laws](#laws-12)
   - [Natural Transformations](#natural-transformations)
-    - [Laws](#laws-10)
+    - [Laws](#laws-13)
     - [Examples](#examples-10)
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
-    - [Laws](#laws-11)
+    - [Laws](#laws-14)
     - [Examples](#examples-11)
   - [Real world app examples](#real-world-app-examples)
     - [Spotify app](#spotify-app)
@@ -899,6 +905,43 @@ insideOut(Maybe, [ Just(2)
                  , Nothing
                  , Just(3) ])
 ```
+
+---
+
+### Alt
+
+```JS
+alt :: Alt f => f a ~> f a -> f a
+```
+
+## Laws
+- Associativity `a.alt(b).alt(c) === a.alt(b.alt(c))`
+- Distributivity `a.alt(b).map(f) === a.map(f).alt(b.map(f))`
+
+---
+
+### Plus
+
+```JS
+zero :: Plus f => () -> f a
+```
+
+## Laws
+- Right identity - zero on the right `x.alt(A.zero()) === x`
+- Left identity `A.zero().alt(x) === x`
+- Annihilation `A.zero().map(f) === A.zero()`
+
+---
+
+---
+
+### Alternative
+
+> There are no special functions for this one, as it is simply the name for a structure that implements both `Plus` and `Applicative`
+
+## Laws
+- Distributivity `x.ap(f.alt(g)) === x.ap(f).alt(x.ap(g))`
+- Annihilation `x.ap(A.zero()) === A.zero()`
 
 ---
 
