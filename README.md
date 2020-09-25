@@ -35,23 +35,27 @@
   - [Laws](#laws-7)
     - [Alternative](#alternative)
   - [Laws](#laws-8)
-  - [Functors](#functors)
-    - [Laws](#laws-9)
+  - [Foldable](#foldable)
+  - [Traversable](#traversable)
+  - [Laws](#laws-9)
     - [Examples](#examples-7)
-  - [Contravariant](#contravariant)
+  - [Functors](#functors)
     - [Laws](#laws-10)
     - [Examples](#examples-8)
-  - [Apply](#apply)
+  - [Contravariant](#contravariant)
     - [Laws](#laws-11)
     - [Examples](#examples-9)
-  - [Monads](#monads)
+  - [Apply](#apply)
     - [Laws](#laws-12)
-  - [Natural Transformations](#natural-transformations)
-    - [Laws](#laws-13)
     - [Examples](#examples-10)
-  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+  - [Monads](#monads)
+    - [Laws](#laws-13)
+  - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-14)
     - [Examples](#examples-11)
+  - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
+    - [Laws](#laws-15)
+    - [Examples](#examples-12)
   - [Real world app examples](#real-world-app-examples)
     - [Spotify app](#spotify-app)
   - [Resources](#resources)
@@ -933,8 +937,6 @@ zero :: Plus f => () -> f a
 
 ---
 
----
-
 ### Alternative
 
 > There are no special functions for this one, as it is simply the name for a structure that implements both `Plus` and `Applicative`
@@ -942,6 +944,116 @@ zero :: Plus f => () -> f a
 ## Laws
 - Distributivity `x.ap(f.alt(g)) === x.ap(f).alt(x.ap(g))`
 - Annihilation `x.ap(A.zero()) === A.zero()`
+
+---
+
+## Foldable
+
+```JS
+reduce :: Foldable f => f a ~> ((b, a) -> b, b) -> b
+```
+
+```JS
+fold :: (Foldable f, Monoid m)
+     => (a -> m) -> f a -> m
+
+// A friendly neighbourhood monoid fold.
+// fold :: Monoid m => (a -> m) -> [a] -> m
+const fold = M => xs => xs.reduce(
+  (acc, x) => acc.concat(M(x)),
+  M.empty())
+```
+
+---
+
+## Traversable
+
+```JS
+traverse :: Applicative f, Traversable t
+         => t a -> (TypeRep f, a -> f b)
+         -> f (t b)
+```
+
+## Laws 
+ - identity `u.traverse(F, F.of) === F.of(u)`
+ - natural transformation `t(u.sequence(F)) === u.traverse(G, t)`
+
+### Examples
+
+```JS
+// getById :: Int -> Task e User
+const getById = id => // Do some AJAX
+
+// insideOut :: Applicative f
+//           => [f a] -> f [a]
+const insideOut = (T, xs) => xs.reduce(
+  (acc, x) => lift2(append, x, acc),
+  T.of([]))
+
+// paralleliseTaskArray
+//   :: [Int] -> Task e [User]
+const paralleliseTaskArray = users =>
+  insideOut(Task, users.map(API.getById))
+```
+
+```JS
+Array.prototype.traverse =
+  function (T, f) {
+    return this.reduce(
+      //    Here's the map bit! vvvv
+      (acc, x) => lift2(append, f(x), acc),
+      T.of([]))
+  }
+
+// Don't worry, though: `sequence` can also
+// be written as a super-simple `traverse`!
+const sequence = (T, xs) =>
+  xs.traverse(T, x => x)
+```
+
+```JS
+// Transform _2, then `map` in the _1!
+Pair.prototype.traverse = function (_, f) {
+  return f(this._2).map(
+    x => Pair(this._1, x))
+}
+
+// Keep the nothing OR map in the Just!
+Maybe.prototype.traverse = function (T, f) {
+  return this.cata({
+    Just: x => f(x).map(Maybe.Just),
+    Nothing: () => T.of(Maybe.Nothing)
+  })
+}
+
+// Lift all the bits, then rebuild!
+Tree.prototype.traverse = function (T, f) {
+  return this.cata({
+    Node: (l, n, r) => lift3(
+      l => n => r =>
+        Tree.Node(l, n, r),
+
+      l.traverse(T, f),
+      f(n),
+      r.traverse(T, f))
+    Leaf: () => T.of(Tree.Leaf)
+  })
+}
+```
+
+```JS
+// toChar :: Int -> Either String Char
+const toChar = n => n < 0 || n > 25
+  ? Left(n + ' is out of bounds!')
+  : Right(String.fromCharCode(n + 65))
+
+// Right(['A', 'B', 'C', 'D'])
+[0,  1,  2,  3].traverse(Either, toChar)
+
+// Left('-2 is out of bounds!')
+[0, 15, 21, -2].traverse(Either, toChar)
+```
+
 
 ---
 
