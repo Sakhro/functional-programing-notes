@@ -586,6 +586,36 @@ app.run("Endo") // ENDO!
 
 ```
 
+```JS
+
+const classToClassName = html =>
+    html.replace(/class\=/ig, 'className=')
+
+const updateStyleTag = html =>
+    html.replace(/style="(.*)"/ig, 'style={{$1}}')
+
+const htmlFor = html =>
+    html.replace(/for=/ig, 'htmlFor=')
+
+const ex1 = html => 
+	Endo(classToClassName)
+	.concat(Endo(updateStyleTag))
+	.concat(Endo(htmlFor))
+	.run(html)
+
+// OR
+
+List([classToClassName, updateStyleTag, htmlFor])
+  .foldMap(Endo, Endo.empty())
+  .run(html)
+
+// Same
+
+[classToClassName, updateStyleTag, htmlFor]
+  .reduce((acc, x) => acc.concat(Endo(x)), Endo.empty())
+	.run(html)
+```
+
 ---
 
 ## Semigroup
@@ -1247,7 +1277,7 @@ Task.of(p1 => p2 => reportHeader(p1, p2))
 
 ## Contravariant
 
-Same as Functor, however backwards. Like `pipe` and `compose`
+Same as Functor, however backwards. Like `pipe` and `compose`. `contramap` its like a before hook, when `map` is after
 
 ```JS
 contramap :: f a ~> (b -> a) -> f b
@@ -1325,6 +1355,61 @@ const searchCheck =
 // And some tests...
 searchCheck.f('Hello', 'HEllO!') // true
 searchCheck.f('world', 'werld')  // false
+```
+
+```JS
+const Reducer = run => ({
+  run,
+  contramap: f => 
+    Reducer((acc, x) => run(acc, f(x)))
+})
+
+Reducer(login.contramap(pay => pay.user))
+  .concat(Reducer(changePage).contramap(pay => pay.currentPage))
+  .run({
+    user: {},
+    currentPage: {}
+  })
+```
+
+```JS
+const Pred = run => ({
+	run,
+	concat: other => Pred(x => run(x) && other.run(x)),
+	contramap: f => Pred(x => run(f(x)))
+});
+
+const greaterThanFour = Pred(x => x > 4)
+const startFromS = Pred(x => x,startsWith("s"))
+
+const p = greaterThanFour
+  .contramap(x => x.length) // Transform string to number for predicate function
+  .concat(startFromS)
+
+p.run("Hello")
+```
+
+```JS
+const extension = file => file.name.split('.')[1]
+
+const matchesAny = regex => str =>
+    str.match(new RegExp(regex, 'ig'))
+
+const matchesAnyP = pattern => Pred(matchesAny(pattern)) // Pred(str => Bool)
+
+const pred = file =>
+	matchesAnyP('txt|md')
+	.contramap(extension)
+	.concat(matchesAnyP('functional').contramap(x => x.contents))
+	.run(file)
+
+[
+  {name: 'blah.dll', contents: '2|38lx8d7ap1,3rjasd8uwenDzvlxcvkc'},
+  {name: 'intro.txt', contents: 'Welcome to the functional programming class'},
+  {name: 'lesson.md', contents: 'We will learn about monoids!'},
+  {name: 'outro.txt', contents: 'Functional programming is a passing fad which you can safely ignore'}
+].filter(pred)
+
 ```
 
 ---
@@ -1683,3 +1768,5 @@ names
 - https://egghead.io/courses/professor-frisby-introduces-composable-functional-javascript
 - http://www.tomharding.me/fantasy-land/
 - https://github.com/fantasyland/fantasy-land#type-representatives
+- https://frontendmasters.com/courses/hardcore-js-v2/
+- https://frontendmasters.com/courses/hardcore-js-patterns/
