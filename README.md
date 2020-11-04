@@ -57,6 +57,7 @@
     - [Laws](#laws-15)
     - [Examples](#examples-12)
   - [Real world app examples](#real-world-app-examples)
+    - [Validation library](#validation-library)
     - [Spotify app](#spotify-app)
   - [Resources](#resources)
 
@@ -1510,6 +1511,53 @@ filterEither(Right("hello"), x => x.match(/h/ig))
 ```
 
 ## Real world app examples
+
+### Validation library 
+
+```JS
+const Success = (x) => ({
+  x,
+  isFail: false,
+  fold: (f, g) => g(x),
+  concat: (other) => (other.isFail ? other : Success(x)),
+});
+
+const Fail = (x) => ({
+  x,
+  isFail: true,
+  fold: (f, g) => f(x),
+  concat: (other) => (other.isFail ? Fail(x.concat(other.x)) : Fail(x)),
+});
+
+const Validation = (run) => ({
+  run,
+  concat: (other) =>
+    Validation((key, val) => run(key, val).concat(other.run(key, val))),
+});
+
+const isEmail = Validation((key, val) =>
+  !!/@/.test(val) ? Success(val) : Fail([`${key} need to be valid email`])
+);
+
+const isPresent = Validation((key, val) =>
+  !!val ? Success(val) : Fail([`${key} need to be present`])
+);
+
+const validate = (spec, obj) =>
+  List(Object.keys(spec)).foldMap(
+    (key) => spec[key].run(key, obj[key]),
+    Success([obj])
+  );
+
+const validation = { name: isPresent, email: isPresent.concat(isEmail) };
+
+const obj = {
+  name: '',
+  email: 'dadas',
+};
+
+const res = validate(validation, obj);
+```
 
 ### Spotify app
 
