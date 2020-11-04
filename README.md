@@ -18,17 +18,18 @@
     - [Examples:](#examples-2)
   - [Function](#function)
     - [Laws](#laws-2)
+    - [Examples](#examples-3)
   - [Semigroup](#semigroup)
     - [Laws](#laws-3)
-    - [Examples:](#examples-3)
+    - [Examples:](#examples-4)
   - [Monoid](#monoid)
     - [Laws](#laws-4)
-    - [Examples:](#examples-4)
-  - [Task](#task)
     - [Examples:](#examples-5)
+  - [Task](#task)
+    - [Examples:](#examples-6)
   - [Applicative](#applicative)
     - [Laws](#laws-5)
-    - [Examples](#examples-6)
+    - [Examples](#examples-7)
     - [Alt](#alt)
   - [Laws](#laws-6)
     - [Plus](#plus)
@@ -38,24 +39,24 @@
   - [Foldable](#foldable)
   - [Traversable](#traversable)
   - [Laws](#laws-9)
-    - [Examples](#examples-7)
+    - [Examples](#examples-8)
   - [Functors](#functors)
     - [Laws](#laws-10)
-    - [Examples](#examples-8)
+    - [Examples](#examples-9)
   - [Contravariant](#contravariant)
     - [Laws](#laws-11)
-    - [Examples](#examples-9)
+    - [Examples](#examples-10)
   - [Apply](#apply)
     - [Laws](#laws-12)
-    - [Examples](#examples-10)
+    - [Examples](#examples-11)
   - [Monads](#monads)
     - [Laws](#laws-13)
   - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-14)
-    - [Examples](#examples-11)
+    - [Examples](#examples-12)
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
     - [Laws](#laws-15)
-    - [Examples](#examples-12)
+    - [Examples](#examples-13)
   - [Real world app examples](#real-world-app-examples)
     - [Validation library](#validation-library)
     - [Spotify app](#spotify-app)
@@ -533,6 +534,56 @@ compose(map(h), map(g))(f)
   === (y => f(y)).map(compose(h, g))
   // YAY!
   === f.map(compose(h, g))
+```
+
+### Examples 
+
+```JS
+const Fn = (run) => ({
+  run,
+  chain: (f) => Fn((x) => f(run(x)).run(x)),
+  map: (f) => Fn((x) => f(run(x))),
+  concat: (other) => Fn((x) => run(x).concat(other.run(x))),
+});
+
+
+Fn(toUpper).concat(Fn(exclaim)).run('Hello');
+
+Fn(toUpper)
+  .chain((upper) => Fn((y) => [upper, exclaim(y)]))
+  .run('Hello');
+
+Fn.of('Hi')
+  .map(toUpper)
+  .chain((upper) => Fn((y) => [upper, exclaim(y)]))
+  .run('Hello');
+
+const app = Fn.of('Start')
+  .map(toUpper)
+  .chain((upper) => Fn((config) => [upper, config]));
+
+const app = Fn.of('Start')
+  .map(toUpper)
+  .chain((upper) => Fn.ask.map((config) => [upper, config]));
+
+app.run({ port: 3000 }); // [ 'START', { port: 3000 } ] from the line 565
+```
+
+```JS
+// Endo is composable function.
+
+const Endo = (run) => ({
+  run,
+  concat: (other) => Endo((x) => run(other.run(x))),
+});
+
+Endo.empty = () => Endo((x) => x)
+
+const app = List([toUpper, exclaim])
+  .foldMap(Endo, Endo.empty(""))  
+  
+app.run("Endo") // ENDO!
+
 ```
 
 ---
