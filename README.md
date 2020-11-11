@@ -19,17 +19,21 @@
   - [Function](#function)
     - [Laws](#laws-2)
     - [Examples](#examples-3)
+  - [Compose](#compose)
+    - [Examples](#examples-4)
+  - [Monad transformers](#monad-transformers)
+    - [Examples](#examples-5)
   - [Semigroup](#semigroup)
     - [Laws](#laws-3)
-    - [Examples:](#examples-4)
+    - [Examples:](#examples-6)
   - [Monoid](#monoid)
     - [Laws](#laws-4)
-    - [Examples:](#examples-5)
+    - [Examples:](#examples-7)
   - [Task](#task)
-    - [Examples:](#examples-6)
+    - [Examples:](#examples-8)
   - [Applicative](#applicative)
     - [Laws](#laws-5)
-    - [Examples](#examples-7)
+    - [Examples](#examples-9)
     - [Alt](#alt)
   - [Laws](#laws-6)
     - [Plus](#plus)
@@ -39,27 +43,28 @@
   - [Foldable](#foldable)
   - [Traversable](#traversable)
   - [Laws](#laws-9)
-    - [Examples](#examples-8)
+    - [Examples](#examples-10)
   - [Functors](#functors)
     - [Laws](#laws-10)
-    - [Examples](#examples-9)
+    - [Examples](#examples-11)
   - [Contravariant](#contravariant)
     - [Laws](#laws-11)
-    - [Examples](#examples-10)
+    - [Examples](#examples-12)
   - [Apply](#apply)
     - [Laws](#laws-12)
-    - [Examples](#examples-11)
+    - [Examples](#examples-13)
   - [Monads](#monads)
     - [Laws](#laws-13)
   - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-14)
-    - [Examples](#examples-12)
+    - [Examples](#examples-14)
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
     - [Laws](#laws-15)
-    - [Examples](#examples-13)
+    - [Examples](#examples-15)
   - [Real world app examples](#real-world-app-examples)
     - [Validation library](#validation-library)
     - [Spotify app](#spotify-app)
+    - [Redux type app](#redux-type-app)
   - [Resources](#resources)
 
 ---
@@ -614,6 +619,137 @@ List([classToClassName, updateStyleTag, htmlFor])
 [classToClassName, updateStyleTag, htmlFor]
   .reduce((acc, x) => acc.concat(Endo(x)), Endo.empty())
 	.run(html)
+```
+---
+
+## Compose
+
+We can't use chain/foldMap with the Compose.
+
+### Examples
+
+```JS
+const Compose = (F, G) => {
+  const M = fg => ({
+    extract: () => fg,
+    map: f => M(fg.map(g => g.map(f)))
+  })
+
+  M.of = x => M(F.of(G.of(x)))
+
+  return M
+} 
+
+const TaskEither = Compose(Task, Either)
+
+TaskEither.of(2)
+  .map(two => two * 10)
+  .map(twenty => twenty + 1)
+  .extract()
+  .fork(console.error, either => 
+    either.fold(console.log, console.log)) // 21
+```
+---
+
+## Monad transformers
+
+### Examples
+
+```JS
+const find = (table, query) =>
+  Task.of(Either.fromNulluble(find(table, query)))
+
+// Insted of this bellow
+const app = () => 
+  find(users, { id: 1 }) // Task(Either(User))
+  .chain(eu => 
+    eu.fold(Task.rejected, u => find(following, { follow_id: u.id }))
+  ).chain(eu => 
+    eu.fold(Task.rejected, fo => find(users, { id: fo.user_id }))
+  )
+  .fork(console.error, eu => eu.fold(console.error, console.log))
+
+// To this
+const TaskEither = TaskT(Either) 
+// TaskEither.of(Either...) => Task(Either(Either...))
+// TaskEither.lift(Either...) => Task(Either(x))
+
+const find = (table, query) =>
+  TaskEither.lift(Either.fromNulluble(find(table, query)))
+
+const app = () =>
+  find(users, { id: 1 }) // Task(Either(User))
+  .chain(u => find(following, { follow_id: u.id })) // Task(Either(User))
+  .chain(fo => find(users, { id: fo.user_id })) // Task(Either(User))
+  .fork(console.error, eu => eu.fold(console.error, console.log))
+```
+
+```JS
+const Fn = g =>
+({
+  map: f =>
+    Fn(x => f(g(x))),
+  chain: f =>
+    Fn(x => f(g(x)).run(x)),
+  run: g
+})
+Fn.ask = Fn(x => x)
+Fn.of = x => Fn(() => x)
+
+const FnT = M => {
+  const Fn = g =>
+	({
+	  map: f =>
+		Fn(x => g(x).map(f)),
+	  chain: f =>
+		Fn(x => g(x).chain(y => f(y).run(x))),
+	  run: g
+	})
+  Fn.ask = Fn(x => M.of(x))
+  Fn.of = x => Fn(() => M.of(x))
+  Fn.lift = x => Fn(() => x)
+  return Fn
+}
+
+const FnEither = FnT(Either)
+
+const ex1 = () => FnEither.ask.map(x => x.port)
+
+ex1(1).run({port: 8080}).fold(x => x, x => x) // 8080
+
+const fakeDb = xs => ({find: (id) => Either.fromNullable(xs[id])})
+
+const connectDb = port =>
+    port === 8080 ? Right(fakeDb(['red', 'green', 'blue'])) : Left('failed to connect')
+
+const ex1a = id => 
+	ex1()
+	.chain(port => FnEither.lift(connectDb(port)))
+	.chain(db => FnEither.lift(db.find(id)))
+	
+ex1a(1).run({port: 8080}).fold(x => x, x => x) // green
+```
+
+```JS
+const posts = [{id: 1, title: 'Get some Fp'}, {id: 2, title: 'Learn to architect it'}, {id: 3}]
+
+const postUrl = (server, id) => [server, id].join('/')
+
+const fetch = url => url.match(/serverA/ig) ? Task.of({data: JSON.stringify(posts)}) : Task.rejected(`Unknown server ${url}`)
+
+const ReaderTask = FnT(Task)
+
+const ex2 = id =>
+	ReaderTask.ask
+	.chain(server => ReaderTask.lift(fetch(postUrl(server, id)).map(x => x.data).map(JSON.parse)))
+
+ex2(30)
+	.run('http://serverA.com')
+	.fork(
+		e => console.error(e),
+		posts => posts[0].title
+	) // 'Get some Fp'
+
 ```
 
 ---
@@ -1761,6 +1897,51 @@ const main = names =>
 names
   .chain(main)
   .fork(console.error, console.log)
+```
+
+### Redux type app
+
+```JS
+// (acc, a) -> acc
+// (a, acc) -> acc
+// a -> (acc -> acc)
+// a -> Endo(acc -> acc)
+
+// Fn(a -> Endo(acc -> acc))
+
+const login => payload => state =>
+  payload.email
+    ? {
+      ...state,
+      loggedIn: true,
+    }
+    : state
+
+const setPrefs = payload => state =>
+  payload.prefs
+    ? {
+      ...state,
+      prefs: payload.prefs
+    }
+    : state
+
+const reducer = Fn(login)
+  .map(Endo)
+  .concat(Fn(setPrefs).map(Endo))
+
+const state = {
+  loggedIn: false,
+  prefs: {}
+}
+const payload = {
+  email: "email@mail.com",
+  pass: 123,
+  prefs: {
+    color: "#000",
+  }
+}
+
+reducer.run(payload).run(state) // { loggedIn: true, prefs: { color: "#000" } }
 ```
 
 ---
