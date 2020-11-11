@@ -23,17 +23,19 @@
     - [Examples](#examples-4)
   - [Monad transformers](#monad-transformers)
     - [Examples](#examples-5)
+  - [Free Monad](#free-monad)
+    - [Examples](#examples-6)
   - [Semigroup](#semigroup)
     - [Laws](#laws-3)
-    - [Examples:](#examples-6)
+    - [Examples:](#examples-7)
   - [Monoid](#monoid)
     - [Laws](#laws-4)
-    - [Examples:](#examples-7)
-  - [Task](#task)
     - [Examples:](#examples-8)
+  - [Task](#task)
+    - [Examples:](#examples-9)
   - [Applicative](#applicative)
     - [Laws](#laws-5)
-    - [Examples](#examples-9)
+    - [Examples](#examples-10)
     - [Alt](#alt)
   - [Laws](#laws-6)
     - [Plus](#plus)
@@ -43,24 +45,24 @@
   - [Foldable](#foldable)
   - [Traversable](#traversable)
   - [Laws](#laws-9)
-    - [Examples](#examples-10)
+    - [Examples](#examples-11)
   - [Functors](#functors)
     - [Laws](#laws-10)
-    - [Examples](#examples-11)
+    - [Examples](#examples-12)
   - [Contravariant](#contravariant)
     - [Laws](#laws-11)
-    - [Examples](#examples-12)
+    - [Examples](#examples-13)
   - [Apply](#apply)
     - [Laws](#laws-12)
-    - [Examples](#examples-13)
+    - [Examples](#examples-14)
   - [Monads](#monads)
     - [Laws](#laws-13)
   - [Natural Transformations](#natural-transformations)
     - [Laws](#laws-14)
-    - [Examples](#examples-14)
+    - [Examples](#examples-15)
   - [Isomorphisms and round trip data transformations](#isomorphisms-and-round-trip-data-transformations)
     - [Laws](#laws-15)
-    - [Examples](#examples-15)
+    - [Examples](#examples-16)
   - [Real world app examples](#real-world-app-examples)
     - [Validation library](#validation-library)
     - [Spotify app](#spotify-app)
@@ -750,6 +752,35 @@ ex2(30)
 		posts => posts[0].title
 	) // 'Get some Fp'
 
+```
+
+---
+
+## Free Monad
+
+### Examples
+
+```JS
+const {liftF} = require('../lib/free')
+const {Id} = require('../lib/types')
+const {taggedSum} = require('daggy')
+
+const Http = taggedSum('Http', {Get: ['url'], Post: ['url', 'body']})
+
+const httpGet = (url) => liftF(Http.Get(url))
+const httpPost = (url, body) => liftF(Http.Post(url, body))
+
+const app = () =>
+  httpGet('/home')
+  .chain(contents => httpPost('/analytics', contents))
+
+const interpret = x =>
+  x.cata({
+    Get: url => Id.of(`contents for ${url}`),
+    Post: (url, body) => Id.of(`posted ${body} to ${url}`)
+  })
+
+const res = app().foldMap(interpret, Id.of)
 ```
 
 ---
